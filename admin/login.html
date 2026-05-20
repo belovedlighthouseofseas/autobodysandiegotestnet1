@@ -62,6 +62,16 @@
         msg.style.color = isError ? 'var(--danger-bright)' : 'var(--accent-bright)';
       }
 
+      // Surface error messages that Supabase puts in the URL hash when
+      // a confirmation/recovery link fails (expired, already used, etc.).
+      if (window.location.hash && window.location.hash.indexOf('error') !== -1) {
+        var hp = new URLSearchParams(window.location.hash.slice(1));
+        var errDesc = hp.get('error_description');
+        if (errDesc) {
+          setMsg('Email link issue: ' + errDesc.replace(/\+/g, ' ') + '. Sign in directly below.', true);
+        }
+      }
+
       // If already signed in, send straight to the dashboard.
       sb.auth.getSession().then(function (r) {
         if (r.data && r.data.session) window.location.href = '/admin/';
@@ -93,6 +103,12 @@
         var r = await sb.auth.signUp({
           email: emailEl.value.trim(),
           password: passEl.value,
+          options: {
+            // Send the confirmation link back to /admin/login on the live site
+            // (not the Supabase default of localhost:3000). This URL must be
+            // listed in Supabase Auth → URL Configuration → Redirect URLs.
+            emailRedirectTo: window.location.origin + '/admin/login',
+          },
         });
         signupBtn.disabled = false;
         if (r.error) {
