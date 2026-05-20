@@ -46,27 +46,22 @@
       </p>
     </div>
 
-    <!-- "Check your email" state — shown after a successful signup attempt -->
+    <!-- "Setting up your portal" state — shown after Create Account is clicked -->
     <div class="admin-card" id="check-email-card" style="display:none;">
-      <p class="admin-eyebrow" style="margin:0 0 0.4rem;color:var(--accent-bright);font-family:var(--mono);font-size:0.72rem;letter-spacing:0.22em;text-transform:uppercase;font-weight:600;">Verification Sent</p>
-      <h1 class="admin-h1">Check your email.</h1>
-      <p class="admin-sub" id="check-email-sub">We just sent a confirmation link to <span id="check-email-addr" style="color:var(--accent-bright);"></span>. Open it and click <strong style="color:var(--concrete);">Confirm Email &amp; Continue</strong>.</p>
+      <p class="admin-eyebrow" style="margin:0 0 0.4rem;color:var(--accent-bright);font-family:var(--mono);font-size:0.72rem;letter-spacing:0.22em;text-transform:uppercase;font-weight:600;">Provisioning</p>
+      <h1 class="admin-h1">Setting up your portal&hellip;</h1>
+      <p class="admin-sub" id="check-email-sub">Creating the admin account for <span id="check-email-addr" style="color:var(--accent-bright);"></span> and routing you to your dashboard.</p>
 
       <div style="display:flex;flex-direction:column;align-items:center;gap:1rem;padding:1.5rem 0 0.75rem;">
-        <div class="verify-spinner" aria-label="Waiting"></div>
-        <p style="color:var(--muted-soft);font-family:var(--mono);font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;margin:0;">Waiting for confirmation</p>
+        <div class="verify-spinner" aria-label="Setting up"></div>
+        <p style="color:var(--muted-soft);font-family:var(--mono);font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;margin:0;">Provisioning admin access</p>
       </div>
 
-      <p style="margin-top:1.25rem;color:var(--muted);font-size:0.88rem;line-height:1.55;">
-        This page will automatically advance to your dashboard the moment the link is clicked &mdash; you can leave this tab open.
-      </p>
-
-      <p class="admin-help" style="margin-top:1.25rem;">
-        Didn't get the email? Check spam, or
-        <a href="#" id="resend-link" style="color:var(--accent-bright);">resend it</a>.
-        Already confirmed?
-        <a href="#" id="back-to-signin" style="color:var(--accent-bright);">Back to sign in</a>.
-      </p>
+      <ul style="margin:1.25rem 0 0;padding:0;list-style:none;display:grid;gap:0.6rem;">
+        <li style="color:var(--muted);font-size:0.88rem;display:flex;gap:0.6rem;align-items:flex-start;"><span style="color:var(--accent-bright);font-family:var(--mono);">&#9656;</span>Verifying the admin allowlist</li>
+        <li style="color:var(--muted);font-size:0.88rem;display:flex;gap:0.6rem;align-items:flex-start;"><span style="color:var(--accent-bright);font-family:var(--mono);">&#9656;</span>Building your secure session</li>
+        <li style="color:var(--muted);font-size:0.88rem;display:flex;gap:0.6rem;align-items:flex-start;"><span style="color:var(--accent-bright);font-family:var(--mono);">&#9656;</span>Wiring up the lead intake feed</li>
+      </ul>
     </div>
 
     <a href="/" class="admin-footer-link">&larr; Back to site</a>
@@ -157,49 +152,43 @@
           setMsg('Enter both email and a password (8+ chars) first.', true);
           return;
         }
-        setMsg('Creating account and sending confirmation email…');
-        signupBtn.disabled = true;
         var email = emailEl.value.trim();
-        var r = await sb.auth.signUp({
-          email: email,
-          password: passEl.value,
-          options: {
-            // Where the user lands after clicking the confirmation link.
-            // The email template (in Supabase dashboard) constructs the link
-            // to point directly to /admin/verify, so this is a fallback.
-            emailRedirectTo: window.location.origin + '/admin/verify',
-          },
-        });
-        signupBtn.disabled = false;
+        var password = passEl.value;
+        signupBtn.disabled = true;
+        loginBtn.disabled = true;
+
+        // Show the branded "setting up" card immediately for a smooth
+        // single-tab experience. The auto-confirm DB trigger handles
+        // email verification for allowlisted admins, so no link clicking.
+        showCheckEmail(email);
+
+        // Small staged delay so the animation reads as deliberate rather
+        // than a flash. Tune per taste.
+        await new Promise(function (r) { setTimeout(r, 600); });
+
+        var r = await sb.auth.signUp({ email: email, password: password });
         if (r.error) {
+          signupBtn.disabled = false;
+          loginBtn.disabled = false;
+          showSignIn();
           setMsg(r.error.message || 'Signup failed.', true);
           return;
         }
-        // Show the "check your email" branded state. Tab will auto-advance
-        // when the verify link is clicked (cross-tab session sync).
-        showCheckEmail(email);
-      });
 
-      // Resend & back-to-signin links inside the "Check your email" card
-      document.getElementById('resend-link').addEventListener('click', async function (e) {
-        e.preventDefault();
-        var email = checkAddr.textContent;
-        if (!email) return;
-        this.textContent = 'sending…';
-        var r = await sb.auth.resend({
-          type: 'signup',
-          email: email,
-          options: { emailRedirectTo: window.location.origin + '/admin/verify' },
-        });
-        this.textContent = r.error ? 'failed — try again' : 'sent';
-        setTimeout(function () {
-          document.getElementById('resend-link').textContent = 'resend it';
-        }, 4000);
-      });
+        // Auto-confirm trigger has already set email_confirmed_at, so
+        // password sign-in works immediately.
+        var s = await sb.auth.signInWithPassword({ email: email, password: password });
+        if (s.error) {
+          signupBtn.disabled = false;
+          loginBtn.disabled = false;
+          showSignIn();
+          setMsg(s.error.message || 'Sign in failed.', true);
+          return;
+        }
 
-      document.getElementById('back-to-signin').addEventListener('click', function (e) {
-        e.preventDefault();
-        showSignIn();
+        // Brief pause so the success state is visible, then redirect.
+        await new Promise(function (r) { setTimeout(r, 700); });
+        window.location.href = '/admin/?welcome=1';
       });
     })();
   </script>

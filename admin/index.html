@@ -58,6 +58,25 @@
     </main>
   </div>
 
+  <!-- Welcome modal — shown once after fresh signup -->
+  <div class="welcome-overlay" id="welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-h1">
+    <div class="welcome-card">
+      <button class="welcome-close" id="welcome-close" aria-label="Close welcome">&times;</button>
+      <div class="welcome-check" aria-hidden="true">&#10003;</div>
+      <p class="welcome-eyebrow">Admin Portal &middot; Provisioned</p>
+      <h1 class="welcome-h1" id="welcome-h1">Welcome to the AutoBody <span class="accent">San Diego</span> command center.</h1>
+      <p class="welcome-sub">Your portal is live. Leads from the quote funnel will land here in real time the moment customers submit photos.</p>
+      <ul class="welcome-list">
+        <li><span class="dot">1</span><span><strong style="color:var(--concrete);">Lead inbox</strong> &mdash; every new repair request sorted by damage type, status, and city.</span></li>
+        <li><span class="dot">2</span><span><strong style="color:var(--concrete);">Photo-first detail view</strong> &mdash; click any lead to see the customer's photos, vehicle info, and what happened.</span></li>
+        <li><span class="dot">3</span><span><strong style="color:var(--concrete);">Reply via Gmail</strong> &mdash; one click opens Gmail compose with the customer's email prefilled.</span></li>
+      </ul>
+      <div class="welcome-actions">
+        <button class="btn btn-primary btn-lg" id="welcome-tour">View my leads &rarr;</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     (function () {
       var sb = window.sb;
@@ -161,12 +180,34 @@
         });
       }
 
+      function maybeShowWelcome() {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('welcome') !== '1') return;
+        var overlay = document.getElementById('welcome-overlay');
+        var closeBtn = document.getElementById('welcome-close');
+        var tourBtn = document.getElementById('welcome-tour');
+        function dismiss() {
+          overlay.classList.remove('show');
+          // Clean up the URL so refreshing doesn't reopen the modal
+          var clean = window.location.pathname;
+          window.history.replaceState({}, '', clean);
+        }
+        // Stagger the overlay reveal so it reads as a moment, not a flash
+        setTimeout(function () { overlay.classList.add('show'); }, 250);
+        closeBtn.addEventListener('click', dismiss);
+        tourBtn.addEventListener('click', dismiss);
+        overlay.addEventListener('click', function (e) {
+          if (e.target === overlay) dismiss();
+        });
+      }
+
       async function init() {
         var session = await window.AdminAuth.require();
         if (!session) return;
 
         document.getElementById('user-email').textContent = session.user.email || '';
         document.getElementById('sign-out').addEventListener('click', window.AdminAuth.signOut);
+        maybeShowWelcome();
         document.getElementById('change-pw').addEventListener('click', async function () {
           var pw = prompt('Enter a new password (8+ characters):');
           if (!pw) return;
