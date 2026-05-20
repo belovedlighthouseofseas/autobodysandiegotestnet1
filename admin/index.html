@@ -35,24 +35,47 @@
       <div class="wrap">
         <div class="admin-page-head">
           <div>
-            <h1>Leads</h1>
-            <p>Live lead intake from the AutoBody San Diego quote funnel.</p>
+            <div class="admin-eyebrow-row">
+              <span class="admin-eyebrow-label">Repair Lead Intake</span>
+              <span class="admin-live-pill"><span class="admin-live-dot"></span>Live</span>
+            </div>
+            <h1>Lead <span class="accent">command center</span>.</h1>
+            <p>Real-time intake from the AutoBody San Diego quote funnel. Sorted, filtered, and ready to action.</p>
           </div>
-          <a class="btn btn-ghost" href="/get-a-quote" target="_blank" rel="noopener">View public quote form &rarr;</a>
+          <a class="btn btn-ghost btn-sm" href="/get-a-quote" target="_blank" rel="noopener">View public quote form &rarr;</a>
         </div>
 
         <div class="stat-grid" id="stat-grid">
-          <div class="stat-card"><div class="stat-label">Total leads</div><div class="stat-value" id="stat-total">—</div></div>
-          <div class="stat-card"><div class="stat-label">New (last 7d)</div><div class="stat-value" id="stat-week">—</div></div>
-          <div class="stat-card"><div class="stat-label">Top damage type</div><div class="stat-value" id="stat-damage" style="font-size: 1.3rem;">—</div></div>
-          <div class="stat-card"><div class="stat-label">Top city</div><div class="stat-value" id="stat-city" style="font-size: 1.3rem;">—</div></div>
-          <div class="stat-card"><div class="stat-label">Open (not won/lost)</div><div class="stat-value" id="stat-open">—</div></div>
+          <div class="stat-card stat-card--hero">
+            <div class="stat-label">Total leads</div>
+            <div class="stat-value" id="stat-total">—</div>
+            <div class="stat-delta" id="stat-trend"></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">New (7d)</div>
+            <div class="stat-value" id="stat-week">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Open</div>
+            <div class="stat-value" id="stat-open">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Top damage type</div>
+            <div class="stat-value stat-value--text" id="stat-damage">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Top city</div>
+            <div class="stat-value stat-value--text" id="stat-city">—</div>
+          </div>
         </div>
 
         <div class="filter-row" id="filter-row"></div>
 
         <div class="lead-table-wrap" id="table-wrap">
-          <div class="empty-state"><h3>Loading…</h3></div>
+          <div class="empty-state">
+            <div class="empty-state-icon">&#9612;&#9612;</div>
+            <h3>Loading lead inbox&hellip;</h3>
+          </div>
         </div>
       </div>
     </main>
@@ -89,7 +112,7 @@
         return rows.reduce(function (acc, r) { return acc + (r.status === status ? 1 : 0); }, 0);
       }
 
-      function topCounter(rows, field, formatter) {
+      function topCounterHtml(rows, field, formatter) {
         var counts = {};
         rows.forEach(function (r) {
           var k = r[field];
@@ -97,8 +120,9 @@
           counts[k] = (counts[k] || 0) + 1;
         });
         var top = Object.entries(counts).sort(function (a, b) { return b[1] - a[1]; })[0];
-        if (!top) return '—';
-        return (formatter ? formatter(top[0]) : top[0]) + '  (' + top[1] + ')';
+        if (!top) return '<span style="color:var(--muted-soft);">—</span>';
+        var label = formatter ? formatter(top[0]) : top[0];
+        return escape(label) + '<span class="stat-value-count">' + top[1] + '</span>';
       }
 
       function renderStats() {
@@ -107,12 +131,19 @@
         var weekAgo = new Date(Date.now() - 7 * 86400 * 1000);
         var week = allLeads.filter(function (r) { return new Date(r.created_at) > weekAgo; }).length;
         document.getElementById('stat-week').textContent = week;
-        document.getElementById('stat-damage').textContent = topCounter(allLeads, 'damage_type', window.AdminFmt.damageLabel);
-        document.getElementById('stat-city').textContent = topCounter(allLeads, 'city');
+        document.getElementById('stat-damage').innerHTML = topCounterHtml(allLeads, 'damage_type', window.AdminFmt.damageLabel);
+        document.getElementById('stat-city').innerHTML = topCounterHtml(allLeads, 'city');
         var openCount = allLeads.filter(function (r) {
           return r.status !== 'won' && r.status !== 'lost' && r.status !== 'bad_lead';
         }).length;
         document.getElementById('stat-open').textContent = openCount;
+        // Trend line on the hero card
+        var trendEl = document.getElementById('stat-trend');
+        if (trendEl) {
+          if (total === 0) trendEl.textContent = '';
+          else if (week === 0) trendEl.textContent = 'No new leads this week';
+          else trendEl.textContent = '+' + week + ' in the last 7 days';
+        }
       }
 
       function renderFilters() {
@@ -139,12 +170,27 @@
 
         var wrap = document.getElementById('table-wrap');
         if (!rows.length) {
-          wrap.innerHTML = '<div class="empty-state"><h3>No leads ' +
-            (currentFilter === 'all' ? 'yet' : 'in this status') + '.</h3>' +
-            '<p>When customers submit the quote form, they\'ll appear here.</p></div>';
+          var heading, body, cta;
+          if (currentFilter === 'all') {
+            heading = 'Inbox is empty.';
+            body = 'Repair requests from <code style="color:var(--accent-bright);font-family:var(--mono);">/get-a-quote</code> land here in real time. Try submitting one yourself to see how it looks.';
+            cta = '<a class="btn btn-ghost btn-sm" href="/get-a-quote" target="_blank" rel="noopener">Open public quote form &rarr;</a>';
+          } else {
+            heading = 'Nothing in this status.';
+            body = 'No leads currently labeled <strong style="color:var(--concrete);">' + escape(window.AdminFmt.statusLabel(currentFilter)) + '</strong>.';
+            cta = '';
+          }
+          wrap.innerHTML =
+            '<div class="empty-state">' +
+              '<div class="empty-state-icon">&#9658;</div>' +
+              '<h3>' + escape(heading) + '</h3>' +
+              '<p>' + body + '</p>' +
+              cta +
+            '</div>';
           return;
         }
 
+        var hourAgo = Date.now() - 3600 * 1000;
         var html = '<table class="lead-table"><thead><tr>' +
           '<th>Name &amp; Vehicle</th>' +
           '<th>Damage</th>' +
@@ -153,8 +199,12 @@
           '<th>Received</th>' +
         '</tr></thead><tbody>';
         rows.forEach(function (lead) {
+          var photoCount = (lead.photo_paths && lead.photo_paths.length) || 0;
+          var isFresh = new Date(lead.created_at).getTime() > hourAgo;
           html += '<tr class="row-link" data-id="' + lead.id + '">' +
             '<td><span class="name">' + escape(lead.name || 'Unknown') + '</span>' +
+              (isFresh ? '<span class="fresh-chip">New</span>' : '') +
+              (photoCount > 0 ? '<span class="photo-chip">' + photoCount + ' photo' + (photoCount === 1 ? '' : 's') + '</span>' : '') +
               '<span class="meta">' + escape(window.AdminFmt.vehicleString(lead)) +
               (lead.phone ? ' &middot; ' + escape(lead.phone) : '') + '</span></td>' +
             '<td><span class="damage-badge">' + escape(window.AdminFmt.damageLabel(lead.damage_type)) + '</span></td>' +
