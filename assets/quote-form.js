@@ -152,9 +152,70 @@
     }
   }
 
+  // Photo preview state — maintained per-form so users can review + remove
+  // selected photos before submitting. The browser's HTMLInputElement.files
+  // is read-only and indexed, so we mirror it into a DataTransfer object
+  // that we can mutate (remove items by index), then write back to the
+  // input. The handler reads from the same input at submit time.
+  function setupPhotoPreview(form) {
+    var input = form.querySelector('input[type="file"]');
+    if (!input) return;
+    var grid = form.querySelector('#photo-preview') || document.getElementById('photo-preview');
+    var counter = form.querySelector('#photo-count') || document.getElementById('photo-count');
+    if (!grid || !counter) return;
+
+    function bytesToKB(n) { return (n / 1024).toFixed(0) + ' KB'; }
+
+    function render() {
+      grid.innerHTML = '';
+      var files = Array.from(input.files || []);
+      if (!files.length) {
+        counter.textContent = '';
+        return;
+      }
+      counter.textContent = files.length + ' photo' + (files.length === 1 ? '' : 's') + ' attached';
+      files.forEach(function (file, i) {
+        var tile = document.createElement('div');
+        tile.className = 'photo-preview-tile';
+
+        var img = document.createElement('img');
+        img.alt = 'Damage photo ' + (i + 1);
+        var reader = new FileReader();
+        reader.onload = function (e) { img.src = e.target.result; };
+        reader.readAsDataURL(file);
+
+        var meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.textContent = bytesToKB(file.size);
+
+        var remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'remove';
+        remove.setAttribute('aria-label', 'Remove photo ' + (i + 1));
+        remove.textContent = '×';
+        remove.addEventListener('click', function () {
+          var dt = new DataTransfer();
+          Array.from(input.files).forEach(function (f, k) {
+            if (k !== i) dt.items.add(f);
+          });
+          input.files = dt.files;
+          render();
+        });
+
+        tile.appendChild(img);
+        tile.appendChild(meta);
+        tile.appendChild(remove);
+        grid.appendChild(tile);
+      });
+    }
+
+    input.addEventListener('change', render);
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('form.quote-form').forEach(function (form) {
       form.addEventListener('submit', handleSubmit);
+      setupPhotoPreview(form);
     });
   });
 })();

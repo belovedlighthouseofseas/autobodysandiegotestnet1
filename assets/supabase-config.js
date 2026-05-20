@@ -14,7 +14,11 @@
  */
 window.SUPABASE_CONFIG = {
   url: 'https://opwpvpxgjgdnfckhxzyu.supabase.co',
-  anonKey: 'sb_publishable_wkGbCJOvJOr19ozB5QWo4g_2inyXzD7',
+  // Legacy anon JWT — RLS policies use `to anon` which requires this
+  // role explicitly in the JWT claims. The newer publishable key flavour
+  // (`sb_publishable_*`) maps differently and was hitting RLS errors on
+  // the public form INSERTs. Both keys are public and safe to expose.
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9wd3B2cHhnamdkbmZja2h4enl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNzEzMzgsImV4cCI6MjA5NDc0NzMzOH0.HoHIo9Fg8kJ3nZgbWjWsQ1p4fNHAmhZ9VfA3eXLhRSA',
   photosBucket: 'lead-photos',
 };
 
