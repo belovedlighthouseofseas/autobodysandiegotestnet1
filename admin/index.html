@@ -25,6 +25,7 @@
           <a href="/admin/">Leads</a>
           <a href="https://vercel.com/light-house-wall-of-sea/autobodysandiego-com/analytics" target="_blank" rel="noopener">Analytics &uarr;</a>
           <span id="user-email" class="admin-bar-email"></span>
+          <button id="change-pw">Change password</button>
           <button id="sign-out">Sign Out</button>
         </nav>
       </div>
@@ -166,6 +167,14 @@
 
         document.getElementById('user-email').textContent = session.user.email || '';
         document.getElementById('sign-out').addEventListener('click', window.AdminAuth.signOut);
+        document.getElementById('change-pw').addEventListener('click', async function () {
+          var pw = prompt('Enter a new password (8+ characters):');
+          if (!pw) return;
+          if (pw.length < 8) { window.AdminToast('Password must be at least 8 characters.', true); return; }
+          var u = await sb.auth.updateUser({ password: pw });
+          if (u.error) { window.AdminToast('Couldn\'t change password: ' + u.error.message, true); return; }
+          window.AdminToast('Password updated.');
+        });
 
         var r = await sb.from('leads').select('*').order('created_at', { ascending: false });
         if (r.error) {
