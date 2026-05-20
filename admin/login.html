@@ -20,7 +20,9 @@
     <a class="cmd-brand" href="/" style="margin-bottom: 2rem;">
       <img src="/assets/header-logo.png" alt="AutoBody San Diego" class="cmd-logo" width="180" height="46">
     </a>
-    <div class="admin-card" id="auth-card">
+
+    <!-- STEP 1 — Enter email + password -->
+    <div class="admin-card" id="step-signin">
       <p class="admin-eyebrow" style="margin:0 0 0.4rem;color:var(--accent-bright);font-family:var(--mono);font-size:0.72rem;letter-spacing:0.22em;text-transform:uppercase;font-weight:600;">Admin Portal</p>
       <h1 class="admin-h1">Admin Sign In</h1>
       <p class="admin-sub">Sign in to manage AutoBody San Diego leads.</p>
@@ -42,98 +44,144 @@
       <p class="admin-help">
         First time setup: click "Create Account" with the admin email
         (<code>davidraymurillo@gmail.com</code>) and a password you'll remember.
-        Confirm via the email we send, then this page will auto-advance to your dashboard.
+        We'll send a 6-digit code to your inbox — type it here and you're in.
       </p>
     </div>
 
-    <!-- "Setting up your portal" state — shown after Create Account is clicked -->
-    <div class="admin-card" id="check-email-card" style="display:none;">
-      <p class="admin-eyebrow" style="margin:0 0 0.4rem;color:var(--accent-bright);font-family:var(--mono);font-size:0.72rem;letter-spacing:0.22em;text-transform:uppercase;font-weight:600;">Provisioning</p>
-      <h1 class="admin-h1">Setting up your portal&hellip;</h1>
-      <p class="admin-sub" id="check-email-sub">Creating the admin account for <span id="check-email-addr" style="color:var(--accent-bright);"></span> and routing you to your dashboard.</p>
+    <!-- STEP 2 — Enter the 6-digit code -->
+    <div class="admin-card" id="step-otp" style="display:none;">
+      <p class="admin-eyebrow" style="margin:0 0 0.4rem;color:var(--accent-bright);font-family:var(--mono);font-size:0.72rem;letter-spacing:0.22em;text-transform:uppercase;font-weight:600;">Verification</p>
+      <h1 class="admin-h1">Enter your access code.</h1>
+      <p class="admin-sub">We sent a 6-digit code to <span id="otp-email" style="color:var(--accent-bright);"></span>. Type it below — code expires in 10 minutes.</p>
 
-      <div style="display:flex;flex-direction:column;align-items:center;gap:1rem;padding:1.5rem 0 0.75rem;">
-        <div class="verify-spinner" aria-label="Setting up"></div>
-        <p style="color:var(--muted-soft);font-family:var(--mono);font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;margin:0;">Provisioning admin access</p>
+      <div class="otp-grid" id="otp-grid" role="group" aria-label="6-digit verification code">
+        <input type="text" inputmode="numeric" maxlength="1" pattern="\d" class="otp-box" data-i="0">
+        <input type="text" inputmode="numeric" maxlength="1" pattern="\d" class="otp-box" data-i="1">
+        <input type="text" inputmode="numeric" maxlength="1" pattern="\d" class="otp-box" data-i="2">
+        <input type="text" inputmode="numeric" maxlength="1" pattern="\d" class="otp-box" data-i="3">
+        <input type="text" inputmode="numeric" maxlength="1" pattern="\d" class="otp-box" data-i="4">
+        <input type="text" inputmode="numeric" maxlength="1" pattern="\d" class="otp-box" data-i="5">
       </div>
 
-      <ul style="margin:1.25rem 0 0;padding:0;list-style:none;display:grid;gap:0.6rem;">
-        <li style="color:var(--muted);font-size:0.88rem;display:flex;gap:0.6rem;align-items:flex-start;"><span style="color:var(--accent-bright);font-family:var(--mono);">&#9656;</span>Verifying the admin allowlist</li>
-        <li style="color:var(--muted);font-size:0.88rem;display:flex;gap:0.6rem;align-items:flex-start;"><span style="color:var(--accent-bright);font-family:var(--mono);">&#9656;</span>Building your secure session</li>
-        <li style="color:var(--muted);font-size:0.88rem;display:flex;gap:0.6rem;align-items:flex-start;"><span style="color:var(--accent-bright);font-family:var(--mono);">&#9656;</span>Wiring up the lead intake feed</li>
-      </ul>
+      <button id="verify-btn" class="btn btn-primary btn-block btn-lg" type="button" style="margin-top: 1.5rem;">Verify Code &amp; Sign In</button>
+      <p id="otp-msg" class="admin-msg"></p>
+
+      <p class="admin-help">
+        Didn't get it? Check spam, or
+        <a href="#" id="otp-resend" style="color:var(--accent-bright);">resend the code</a>.
+        Wrong email?
+        <a href="#" id="otp-back" style="color:var(--accent-bright);">Go back</a>.
+      </p>
+    </div>
+
+    <!-- STEP 3 — Provisioning success state, while we redirect -->
+    <div class="admin-card" id="step-done" style="display:none;">
+      <p class="admin-eyebrow" style="margin:0 0 0.4rem;color:var(--accent-bright);font-family:var(--mono);font-size:0.72rem;letter-spacing:0.22em;text-transform:uppercase;font-weight:600;">Verified</p>
+      <h1 class="admin-h1">Welcome.</h1>
+      <p class="admin-sub">Signing you in and routing to your dashboard&hellip;</p>
+      <div style="display:flex;justify-content:center;padding:1.5rem 0;">
+        <div class="verify-spinner"></div>
+      </div>
     </div>
 
     <a href="/" class="admin-footer-link">&larr; Back to site</a>
   </div>
 
   <style>
-    .verify-spinner {
-      width: 44px; height: 44px;
-      border: 3px solid var(--line);
-      border-top-color: var(--accent-bright);
-      border-radius: 999px;
-      animation: spin 0.9s linear infinite;
-    }
+    .verify-spinner { width: 44px; height: 44px; border: 3px solid var(--line); border-top-color: var(--accent-bright); border-radius: 999px; animation: spin 0.9s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .otp-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.5rem; margin-top: 1rem; }
+    .otp-box {
+      width: 100%; height: 64px;
+      text-align: center;
+      font-family: var(--mono); font-size: 1.6rem; font-weight: 700;
+      background: var(--bg); color: var(--concrete);
+      border: 1px solid var(--line-bright); border-radius: var(--radius);
+      transition: all 0.12s;
+      caret-color: var(--accent-bright);
+    }
+    .otp-box:focus {
+      outline: none; border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent), 0 0 16px rgba(0,157,255,0.18);
+    }
+    .otp-box.filled { border-color: var(--accent); color: var(--accent-bright); }
   </style>
 
   <script>
     (function () {
       var sb = window.initSupabase();
+      var SUPABASE_URL = window.SUPABASE_CONFIG.url;
+      var ANON_KEY = window.SUPABASE_CONFIG.anonKey;
+
+      var stepSignin = document.getElementById('step-signin');
+      var stepOtp = document.getElementById('step-otp');
+      var stepDone = document.getElementById('step-done');
       var form = document.getElementById('auth-form');
       var emailEl = document.getElementById('email');
       var passEl = document.getElementById('password');
       var msg = document.getElementById('auth-msg');
+      var otpMsg = document.getElementById('otp-msg');
       var loginBtn = document.getElementById('login-btn');
       var signupBtn = document.getElementById('signup-btn');
-      var authCard = document.getElementById('auth-card');
-      var checkCard = document.getElementById('check-email-card');
-      var checkAddr = document.getElementById('check-email-addr');
+      var verifyBtn = document.getElementById('verify-btn');
+      var otpEmailEl = document.getElementById('otp-email');
+      var otpBoxes = Array.from(document.querySelectorAll('.otp-box'));
+      var lastEmail = '';
+      var lastPassword = '';
 
-      function setMsg(text, isError) {
-        msg.textContent = text || '';
-        msg.style.color = isError ? 'var(--danger-bright)' : 'var(--accent-bright)';
+      function setMsg(el, text, isError) {
+        el.textContent = text || '';
+        el.style.color = isError ? 'var(--danger-bright)' : 'var(--accent-bright)';
+      }
+      function showStep(stepEl) {
+        [stepSignin, stepOtp, stepDone].forEach(function (s) { s.style.display = 'none'; });
+        stepEl.style.display = 'block';
+      }
+      function callFn(name, payload) {
+        return fetch(SUPABASE_URL + '/functions/v1/' + name, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ANON_KEY, 'apikey': ANON_KEY },
+          body: JSON.stringify(payload),
+        }).then(function (r) { return r.json().then(function (b) { return { status: r.status, body: b }; }); });
       }
 
-      function showCheckEmail(email) {
-        checkAddr.textContent = email;
-        authCard.style.display = 'none';
-        checkCard.style.display = 'block';
-      }
-
-      function showSignIn() {
-        checkCard.style.display = 'none';
-        authCard.style.display = 'block';
-        setMsg('');
-      }
-
-      // Surface error messages that Supabase puts in the URL hash when
-      // a confirmation/recovery link fails (expired, already used, etc.).
-      if (window.location.hash && window.location.hash.indexOf('error') !== -1) {
-        var hp = new URLSearchParams(window.location.hash.slice(1));
-        var errDesc = hp.get('error_description');
-        if (errDesc) {
-          setMsg('Email link issue: ' + errDesc.replace(/\+/g, ' ') + '. Sign in directly below.', true);
-        }
-      }
-
-      // If a session shows up — either because the user is already signed in,
-      // or because verification happened in another tab — go to the dashboard.
+      // If already signed in, send straight to the dashboard.
       sb.auth.getSession().then(function (r) {
         if (r.data && r.data.session) window.location.href = '/admin/';
       });
 
-      // Listen for session changes across tabs. When the verify page in
-      // another tab completes verification, this tab sees SIGNED_IN and
-      // auto-advances to the dashboard.
-      sb.auth.onAuthStateChange(function (event, session) {
-        if (session) window.location.href = '/admin/';
+      // OTP box behavior: auto-advance, backspace goes back, paste fills all
+      otpBoxes.forEach(function (box, i) {
+        box.addEventListener('input', function () {
+          this.value = this.value.replace(/\D/g, '').slice(0, 1);
+          this.classList.toggle('filled', !!this.value);
+          if (this.value && otpBoxes[i + 1]) otpBoxes[i + 1].focus();
+          var full = otpBoxes.map(function (b) { return b.value; }).join('');
+          if (full.length === 6) verifyBtn.click();
+        });
+        box.addEventListener('keydown', function (e) {
+          if (e.key === 'Backspace' && !this.value && otpBoxes[i - 1]) {
+            otpBoxes[i - 1].focus();
+          }
+        });
+        box.addEventListener('paste', function (e) {
+          var text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+          if (text.length > 1) {
+            e.preventDefault();
+            for (var k = 0; k < 6; k++) {
+              otpBoxes[k].value = text[k] || '';
+              otpBoxes[k].classList.toggle('filled', !!otpBoxes[k].value);
+            }
+            if (text.length === 6) verifyBtn.click();
+            else otpBoxes[text.length].focus();
+          }
+        });
       });
 
+      // Sign in (existing accounts)
       form.addEventListener('submit', async function (e) {
         e.preventDefault();
-        setMsg('Signing in…');
+        setMsg(msg, 'Signing in…');
         loginBtn.disabled = true;
         var r = await sb.auth.signInWithPassword({
           email: emailEl.value.trim(),
@@ -141,54 +189,98 @@
         });
         loginBtn.disabled = false;
         if (r.error) {
-          setMsg(r.error.message || 'Sign in failed.', true);
+          setMsg(msg, r.error.message || 'Sign in failed.', true);
           return;
         }
         window.location.href = '/admin/';
       });
 
+      // Sign up → send OTP via Edge Function
       signupBtn.addEventListener('click', async function () {
         if (!emailEl.value.trim() || !passEl.value) {
-          setMsg('Enter both email and a password (8+ chars) first.', true);
+          setMsg(msg, 'Enter both email and a password (8+ chars) first.', true);
           return;
         }
-        var email = emailEl.value.trim();
-        var password = passEl.value;
+        lastEmail = emailEl.value.trim();
+        lastPassword = passEl.value;
         signupBtn.disabled = true;
         loginBtn.disabled = true;
+        setMsg(msg, 'Creating account and sending verification code…');
 
-        // Show the branded "setting up" card immediately for a smooth
-        // single-tab experience. The auto-confirm DB trigger handles
-        // email verification for allowlisted admins, so no link clicking.
-        showCheckEmail(email);
+        var r = await callFn('admin-signup', { email: lastEmail, password: lastPassword });
+        signupBtn.disabled = false;
+        loginBtn.disabled = false;
 
-        // Small staged delay so the animation reads as deliberate rather
-        // than a flash. Tune per taste.
-        await new Promise(function (r) { setTimeout(r, 600); });
-
-        var r = await sb.auth.signUp({ email: email, password: password });
-        if (r.error) {
-          signupBtn.disabled = false;
-          loginBtn.disabled = false;
-          showSignIn();
-          setMsg(r.error.message || 'Signup failed.', true);
+        if (r.status !== 200 || r.body.error) {
+          setMsg(msg, r.body.error || 'Signup failed.', true);
           return;
         }
 
-        // Auto-confirm trigger has already set email_confirmed_at, so
-        // password sign-in works immediately.
-        var s = await sb.auth.signInWithPassword({ email: email, password: password });
+        if (r.body.warning === 'email_send_failed') {
+          setMsg(msg, 'Account created but the verification email could not be sent. Email service not configured. (' + (r.body.detail || '') + ')', true);
+          return;
+        }
+
+        otpEmailEl.textContent = lastEmail;
+        showStep(stepOtp);
+        otpBoxes[0].focus();
+      });
+
+      // Verify the code
+      verifyBtn.addEventListener('click', async function () {
+        var code = otpBoxes.map(function (b) { return b.value; }).join('');
+        if (code.length !== 6) {
+          setMsg(otpMsg, 'Enter all 6 digits.', true);
+          return;
+        }
+        verifyBtn.disabled = true;
+        setMsg(otpMsg, 'Verifying…');
+
+        var v = await callFn('admin-verify', { email: lastEmail, code: code });
+
+        if (v.status !== 200 || !v.body.ok) {
+          verifyBtn.disabled = false;
+          var err = v.body.error || 'Verification failed.';
+          if (err === 'invalid_code') err = 'That code is wrong. Try again.';
+          if (err === 'no_active_code') err = 'No active code — request a new one.';
+          if (err === 'too_many_attempts') err = 'Too many attempts. Request a new code.';
+          setMsg(otpMsg, err, true);
+          // Clear boxes so user can retype
+          otpBoxes.forEach(function (b) { b.value = ''; b.classList.remove('filled'); });
+          otpBoxes[0].focus();
+          return;
+        }
+
+        // Code verified — sign in with password (account is fully created)
+        showStep(stepDone);
+        var s = await sb.auth.signInWithPassword({ email: lastEmail, password: lastPassword });
         if (s.error) {
-          signupBtn.disabled = false;
-          loginBtn.disabled = false;
-          showSignIn();
-          setMsg(s.error.message || 'Sign in failed.', true);
+          showStep(stepSignin);
+          setMsg(msg, 'Verified but sign-in failed: ' + s.error.message, true);
           return;
         }
+        setTimeout(function () { window.location.href = '/admin/?welcome=1'; }, 800);
+      });
 
-        // Brief pause so the success state is visible, then redirect.
-        await new Promise(function (r) { setTimeout(r, 700); });
-        window.location.href = '/admin/?welcome=1';
+      // Resend code
+      document.getElementById('otp-resend').addEventListener('click', async function (e) {
+        e.preventDefault();
+        if (!lastEmail || !lastPassword) return;
+        this.textContent = 'sending…';
+        var r = await callFn('admin-signup', { email: lastEmail, password: lastPassword });
+        this.textContent = (r.status === 200 && !r.body.error) ? 'sent' : 'failed';
+        setTimeout(function () {
+          document.getElementById('otp-resend').textContent = 'resend the code';
+        }, 3000);
+      });
+
+      // Go back
+      document.getElementById('otp-back').addEventListener('click', function (e) {
+        e.preventDefault();
+        showStep(stepSignin);
+        setMsg(msg, '');
+        setMsg(otpMsg, '');
+        otpBoxes.forEach(function (b) { b.value = ''; b.classList.remove('filled'); });
       });
     })();
   </script>
