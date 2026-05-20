@@ -100,22 +100,31 @@
         }
         setMsg('Creating account…');
         signupBtn.disabled = true;
+        var email = emailEl.value.trim();
+        var password = passEl.value;
         var r = await sb.auth.signUp({
-          email: emailEl.value.trim(),
-          password: passEl.value,
+          email: email,
+          password: password,
           options: {
-            // Send the confirmation link back to /admin/login on the live site
-            // (not the Supabase default of localhost:3000). This URL must be
-            // listed in Supabase Auth → URL Configuration → Redirect URLs.
             emailRedirectTo: window.location.origin + '/admin/login',
           },
         });
-        signupBtn.disabled = false;
         if (r.error) {
+          signupBtn.disabled = false;
           setMsg(r.error.message || 'Signup failed.', true);
           return;
         }
-        setMsg('Check your email for a confirmation link, then sign in here.');
+        // For the admin email, a database trigger auto-confirms the user
+        // on insert — so we can immediately sign in without waiting for
+        // an email-link click. For other emails, they still need to verify.
+        setMsg('Account created. Signing you in…');
+        var s = await sb.auth.signInWithPassword({ email: email, password: password });
+        signupBtn.disabled = false;
+        if (s.error) {
+          setMsg('Account created but auto-sign-in failed: ' + s.error.message, true);
+          return;
+        }
+        window.location.href = '/admin/';
       });
     })();
   </script>
