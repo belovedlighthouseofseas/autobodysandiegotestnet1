@@ -20,7 +20,8 @@
     <a class="cmd-brand" href="/" style="margin-bottom: 2rem;">
       <img src="/assets/header-logo.png" alt="AutoBody San Diego" class="cmd-logo" width="180" height="46">
     </a>
-    <div class="admin-card">
+    <div class="admin-card" id="auth-card">
+      <p class="admin-eyebrow" style="margin:0 0 0.4rem;color:var(--accent-bright);font-family:var(--mono);font-size:0.72rem;letter-spacing:0.22em;text-transform:uppercase;font-weight:600;">Admin Portal</p>
       <h1 class="admin-h1">Admin Sign In</h1>
       <p class="admin-sub">Sign in to manage AutoBody San Diego leads.</p>
 
@@ -41,11 +42,46 @@
       <p class="admin-help">
         First time setup: click "Create Account" with the admin email
         (<code>davidraymurillo@gmail.com</code>) and a password you'll remember.
-        Confirm via the email Supabase sends, then sign in.
+        Confirm via the email we send, then this page will auto-advance to your dashboard.
       </p>
     </div>
+
+    <!-- "Check your email" state — shown after a successful signup attempt -->
+    <div class="admin-card" id="check-email-card" style="display:none;">
+      <p class="admin-eyebrow" style="margin:0 0 0.4rem;color:var(--accent-bright);font-family:var(--mono);font-size:0.72rem;letter-spacing:0.22em;text-transform:uppercase;font-weight:600;">Verification Sent</p>
+      <h1 class="admin-h1">Check your email.</h1>
+      <p class="admin-sub" id="check-email-sub">We just sent a confirmation link to <span id="check-email-addr" style="color:var(--accent-bright);"></span>. Open it and click <strong style="color:var(--concrete);">Confirm Email &amp; Continue</strong>.</p>
+
+      <div style="display:flex;flex-direction:column;align-items:center;gap:1rem;padding:1.5rem 0 0.75rem;">
+        <div class="verify-spinner" aria-label="Waiting"></div>
+        <p style="color:var(--muted-soft);font-family:var(--mono);font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;margin:0;">Waiting for confirmation</p>
+      </div>
+
+      <p style="margin-top:1.25rem;color:var(--muted);font-size:0.88rem;line-height:1.55;">
+        This page will automatically advance to your dashboard the moment the link is clicked &mdash; you can leave this tab open.
+      </p>
+
+      <p class="admin-help" style="margin-top:1.25rem;">
+        Didn't get the email? Check spam, or
+        <a href="#" id="resend-link" style="color:var(--accent-bright);">resend it</a>.
+        Already confirmed?
+        <a href="#" id="back-to-signin" style="color:var(--accent-bright);">Back to sign in</a>.
+      </p>
+    </div>
+
     <a href="/" class="admin-footer-link">&larr; Back to site</a>
   </div>
+
+  <style>
+    .verify-spinner {
+      width: 44px; height: 44px;
+      border: 3px solid var(--line);
+      border-top-color: var(--accent-bright);
+      border-radius: 999px;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
 
   <script>
     (function () {
@@ -56,10 +92,25 @@
       var msg = document.getElementById('auth-msg');
       var loginBtn = document.getElementById('login-btn');
       var signupBtn = document.getElementById('signup-btn');
+      var authCard = document.getElementById('auth-card');
+      var checkCard = document.getElementById('check-email-card');
+      var checkAddr = document.getElementById('check-email-addr');
 
       function setMsg(text, isError) {
         msg.textContent = text || '';
         msg.style.color = isError ? 'var(--danger-bright)' : 'var(--accent-bright)';
+      }
+
+      function showCheckEmail(email) {
+        checkAddr.textContent = email;
+        authCard.style.display = 'none';
+        checkCard.style.display = 'block';
+      }
+
+      function showSignIn() {
+        checkCard.style.display = 'none';
+        authCard.style.display = 'block';
+        setMsg('');
       }
 
       // Surface error messages that Supabase puts in the URL hash when
@@ -72,9 +123,17 @@
         }
       }
 
-      // If already signed in, send straight to the dashboard.
+      // If a session shows up — either because the user is already signed in,
+      // or because verification happened in another tab — go to the dashboard.
       sb.auth.getSession().then(function (r) {
         if (r.data && r.data.session) window.location.href = '/admin/';
+      });
+
+      // Listen for session changes across tabs. When the verify page in
+      // another tab completes verification, this tab sees SIGNED_IN and
+      // auto-advances to the dashboard.
+      sb.auth.onAuthStateChange(function (event, session) {
+        if (session) window.location.href = '/admin/';
       });
 
       form.addEventListener('submit', async function (e) {
@@ -98,33 +157,49 @@
           setMsg('Enter both email and a password (8+ chars) first.', true);
           return;
         }
-        setMsg('Creating account…');
+        setMsg('Creating account and sending confirmation email…');
         signupBtn.disabled = true;
         var email = emailEl.value.trim();
-        var password = passEl.value;
         var r = await sb.auth.signUp({
           email: email,
-          password: password,
+          password: passEl.value,
           options: {
-            emailRedirectTo: window.location.origin + '/admin/login',
+            // Where the user lands after clicking the confirmation link.
+            // The email template (in Supabase dashboard) constructs the link
+            // to point directly to /admin/verify, so this is a fallback.
+            emailRedirectTo: window.location.origin + '/admin/verify',
           },
         });
+        signupBtn.disabled = false;
         if (r.error) {
-          signupBtn.disabled = false;
           setMsg(r.error.message || 'Signup failed.', true);
           return;
         }
-        // For the admin email, a database trigger auto-confirms the user
-        // on insert — so we can immediately sign in without waiting for
-        // an email-link click. For other emails, they still need to verify.
-        setMsg('Account created. Signing you in…');
-        var s = await sb.auth.signInWithPassword({ email: email, password: password });
-        signupBtn.disabled = false;
-        if (s.error) {
-          setMsg('Account created but auto-sign-in failed: ' + s.error.message, true);
-          return;
-        }
-        window.location.href = '/admin/';
+        // Show the "check your email" branded state. Tab will auto-advance
+        // when the verify link is clicked (cross-tab session sync).
+        showCheckEmail(email);
+      });
+
+      // Resend & back-to-signin links inside the "Check your email" card
+      document.getElementById('resend-link').addEventListener('click', async function (e) {
+        e.preventDefault();
+        var email = checkAddr.textContent;
+        if (!email) return;
+        this.textContent = 'sending…';
+        var r = await sb.auth.resend({
+          type: 'signup',
+          email: email,
+          options: { emailRedirectTo: window.location.origin + '/admin/verify' },
+        });
+        this.textContent = r.error ? 'failed — try again' : 'sent';
+        setTimeout(function () {
+          document.getElementById('resend-link').textContent = 'resend it';
+        }, 4000);
+      });
+
+      document.getElementById('back-to-signin').addEventListener('click', function (e) {
+        e.preventDefault();
+        showSignIn();
       });
     })();
   </script>

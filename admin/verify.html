@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Confirming Your Email | AutoBody San Diego</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#050505">
+  <link rel="icon" type="image/png" href="/assets/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/admin.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/assets/supabase-config.js"></script>
+</head>
+<body class="admin-body">
+  <div class="admin-auth-wrap">
+    <a class="cmd-brand" href="/" style="margin-bottom: 2rem;">
+      <img src="/assets/header-logo.png" alt="AutoBody San Diego" class="cmd-logo" width="180" height="46">
+    </a>
+    <div class="admin-card" id="verify-card">
+      <p class="admin-eyebrow" style="margin:0 0 0.4rem;color:var(--accent-bright);font-family:var(--mono);font-size:0.72rem;letter-spacing:0.22em;text-transform:uppercase;font-weight:600;">Admin Account &middot; Verification</p>
+      <h1 class="admin-h1" id="verify-h1">Confirming your email&hellip;</h1>
+      <p class="admin-sub" id="verify-sub">Hold on while we verify the link from your inbox.</p>
+
+      <div id="verify-loading" style="display:flex;flex-direction:column;align-items:center;gap:1rem;padding:1.5rem 0;">
+        <div class="verify-spinner" aria-label="Verifying"></div>
+        <p style="color:var(--muted-soft);font-family:var(--mono);font-size:0.78rem;letter-spacing:0.16em;text-transform:uppercase;margin:0;">Verifying token</p>
+      </div>
+
+      <div id="verify-success" style="display:none;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1.25rem;padding:0.5rem 0 1.25rem;">
+          <div style="display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:999px;background:rgba(0,157,255,0.14);border:2px solid var(--accent);color:var(--accent-bright);font-family:var(--mono);font-size:1.9rem;">&#10003;</div>
+          <p style="color:var(--concrete);font-family:var(--display);font-weight:600;font-size:1.05rem;margin:0;text-align:center;">Email confirmed.</p>
+          <p style="color:var(--muted);font-size:0.93rem;text-align:center;margin:0;max-width:340px;line-height:1.55;">You're signed in. Redirecting to your admin dashboard&hellip;</p>
+        </div>
+        <a id="continue-btn" class="btn btn-primary btn-block btn-lg" href="/admin/">Continue to Dashboard &rarr;</a>
+      </div>
+
+      <div id="verify-error" style="display:none;">
+        <div style="padding:1rem;background:rgba(255,30,30,0.06);border:1px solid var(--danger);border-radius:var(--radius);margin-bottom:1rem;">
+          <p id="verify-error-msg" style="margin:0;color:var(--danger-bright);font-size:0.92rem;line-height:1.5;font-family:var(--mono);"></p>
+        </div>
+        <a class="btn btn-primary btn-block" href="/admin/login">Back to Sign In</a>
+        <p style="margin-top:1.25rem;color:var(--muted-soft);font-size:0.85rem;line-height:1.6;text-align:center;">If the link expired, sign in directly &mdash; or sign up again with the same email and password.</p>
+      </div>
+
+      <div class="admin-help" id="verify-meta" style="display:none;">
+        <p style="margin:0 0 0.4rem;color:var(--muted-soft);font-family:var(--mono);font-size:0.7rem;letter-spacing:0.16em;text-transform:uppercase;">Verification recorded</p>
+        <p id="verify-meta-when" style="margin:0;font-size:0.85rem;color:var(--concrete-soft);"></p>
+        <p id="verify-meta-email" style="margin:0.2rem 0 0;font-size:0.85rem;color:var(--accent-bright);font-family:var(--mono);"></p>
+      </div>
+    </div>
+    <a href="/" class="admin-footer-link">&larr; Back to site</a>
+  </div>
+
+  <style>
+    .verify-spinner {
+      width: 44px; height: 44px;
+      border: 3px solid var(--line);
+      border-top-color: var(--accent-bright);
+      border-radius: 999px;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+
+  <script>
+    (function () {
+      var sb = window.initSupabase();
+
+      var h1 = document.getElementById('verify-h1');
+      var sub = document.getElementById('verify-sub');
+      var loading = document.getElementById('verify-loading');
+      var success = document.getElementById('verify-success');
+      var errBox = document.getElementById('verify-error');
+      var errMsg = document.getElementById('verify-error-msg');
+      var metaBox = document.getElementById('verify-meta');
+      var metaWhen = document.getElementById('verify-meta-when');
+      var metaEmail = document.getElementById('verify-meta-email');
+
+      function showError(msg) {
+        loading.style.display = 'none';
+        h1.textContent = "We couldn't confirm this link.";
+        sub.textContent = "The token may be expired, already used, or invalid.";
+        errMsg.textContent = msg;
+        errBox.style.display = 'block';
+      }
+
+      function showSuccess(email) {
+        loading.style.display = 'none';
+        h1.textContent = 'Email confirmed.';
+        sub.textContent = "You're verified as the owner of " + email + " and signed in.";
+        success.style.display = 'block';
+
+        // Render the audit-style "verification recorded" footer
+        var now = new Date();
+        metaWhen.textContent = now.toLocaleString(undefined, {
+          weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+          hour: 'numeric', minute: '2-digit',
+        });
+        metaEmail.textContent = email;
+        metaBox.style.display = 'block';
+
+        // Auto-redirect to dashboard after 2.5s
+        setTimeout(function () { window.location.href = '/admin/'; }, 2500);
+      }
+
+      // Read token + type from URL. Supabase email templates pass these via
+      // query string; the link is constructed manually in the template so it
+      // points to autobodysandiego.com instead of the Supabase Site URL.
+      var url = new URL(window.location.href);
+      var tokenHash = url.searchParams.get('token_hash');
+      var type = url.searchParams.get('type') || 'email';
+
+      // Also handle the fallback case where Supabase used its default URL
+      // and put the access_token in the URL hash. If we see a session token
+      // in the hash, supabase-js will auto-pick it up via detectSessionInUrl.
+      if (!tokenHash && window.location.hash.indexOf('access_token') !== -1) {
+        // Wait briefly for supabase-js to auto-process the hash
+        setTimeout(function () {
+          sb.auth.getSession().then(function (r) {
+            if (r.data && r.data.session) {
+              showSuccess(r.data.session.user.email || '');
+            } else {
+              showError('No verification token found in the link.');
+            }
+          });
+        }, 400);
+        return;
+      }
+
+      if (!tokenHash) {
+        showError('No verification token in the URL. Go back to /admin/login to sign in directly.');
+        return;
+      }
+
+      sb.auth.verifyOtp({ token_hash: tokenHash, type: type })
+        .then(function (r) {
+          if (r.error) {
+            showError(r.error.message || 'Token verification failed.');
+            return;
+          }
+          var email = (r.data && r.data.user && r.data.user.email) || '';
+          showSuccess(email);
+        })
+        .catch(function (err) {
+          showError(err && err.message ? err.message : 'Unexpected error.');
+        });
+    })();
+  </script>
+</body>
+</html>

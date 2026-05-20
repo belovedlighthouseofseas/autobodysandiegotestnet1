@@ -12,7 +12,9 @@ Branded HTML for the 4 auth emails Supabase sends. Paste these into the Supabase
 
 Templates to update: **Confirm signup**, **Reset password**, **Magic Link**, **Change Email Address**.
 
-The variables Supabase fills in (`{{ .ConfirmationURL }}`, `{{ .Email }}`, `{{ .Token }}`, `{{ .SiteURL }}`) are documented at https://supabase.com/docs/guides/auth/auth-email-templates
+The variables Supabase fills in (`{{ .ConfirmationURL }}`, `{{ .Email }}`, `{{ .Token }}`, `{{ .TokenHash }}`, `{{ .SiteURL }}`) are documented at https://supabase.com/docs/guides/auth/auth-email-templates
+
+> **About the localhost:3000 redirect bug:** The Confirm-signup and Reset-password templates below construct the confirmation URL manually — pointing it directly to `https://autobodysandiego.com/admin/verify` instead of using `{{ .ConfirmationURL }}` (which is built from Supabase's Site URL setting). This sidesteps the localhost:3000 redirect issue entirely. The dashboard Site URL fix is no longer required for signup to work, but it's still a good idea to set it for future magic-link / OAuth flows.
 
 ---
 
@@ -54,12 +56,12 @@ Confirm your AutoBody San Diego admin account
         </td></tr>
 
         <tr><td align="center" style="padding:24px 32px 8px;">
-          <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#009DFF;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 28px;border-radius:2px;letter-spacing:0.4px;font-family:'Helvetica Neue',Arial,sans-serif;">Confirm Email &amp; Continue &rarr;</a>
+          <a href="https://autobodysandiego.com/admin/verify?token_hash={{ .TokenHash }}&type=email" style="display:inline-block;background:#009DFF;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 28px;border-radius:2px;letter-spacing:0.4px;font-family:'Helvetica Neue',Arial,sans-serif;">Confirm Email &amp; Continue &rarr;</a>
         </td></tr>
 
         <tr><td style="padding:16px 32px 32px;color:#6B7585;font-size:12px;line-height:1.6;">
           <p style="margin:0 0 8px;">If the button doesn't work, paste this URL into your browser:</p>
-          <p style="margin:0;word-break:break-all;"><a href="{{ .ConfirmationURL }}" style="color:#00AEEF;text-decoration:none;">{{ .ConfirmationURL }}</a></p>
+          <p style="margin:0;word-break:break-all;"><a href="https://autobodysandiego.com/admin/verify?token_hash={{ .TokenHash }}&type=email" style="color:#00AEEF;text-decoration:none;">https://autobodysandiego.com/admin/verify?token_hash={{ .TokenHash }}&type=email</a></p>
         </td></tr>
 
         <tr><td style="padding:0 32px 32px;border-top:1px solid #1B2230;">
@@ -125,12 +127,12 @@ Reset your AutoBody San Diego admin password
         </td></tr>
 
         <tr><td align="center" style="padding:24px 32px 8px;">
-          <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#009DFF;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 28px;border-radius:2px;letter-spacing:0.4px;font-family:'Helvetica Neue',Arial,sans-serif;">Reset Password &rarr;</a>
+          <a href="https://autobodysandiego.com/admin/verify?token_hash={{ .TokenHash }}&type=recovery" style="display:inline-block;background:#009DFF;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 28px;border-radius:2px;letter-spacing:0.4px;font-family:'Helvetica Neue',Arial,sans-serif;">Reset Password &rarr;</a>
         </td></tr>
 
         <tr><td style="padding:16px 32px 32px;color:#6B7585;font-size:12px;line-height:1.6;">
           <p style="margin:0 0 8px;">If the button doesn't work, paste this URL into your browser:</p>
-          <p style="margin:0;word-break:break-all;"><a href="{{ .ConfirmationURL }}" style="color:#00AEEF;text-decoration:none;">{{ .ConfirmationURL }}</a></p>
+          <p style="margin:0;word-break:break-all;"><a href="https://autobodysandiego.com/admin/verify?token_hash={{ .TokenHash }}&type=recovery" style="color:#00AEEF;text-decoration:none;">https://autobodysandiego.com/admin/verify?token_hash={{ .TokenHash }}&type=recovery</a></p>
           <p style="margin:18px 0 0;">If you didn't request this, ignore the email &mdash; your password stays the same.</p>
         </td></tr>
 
